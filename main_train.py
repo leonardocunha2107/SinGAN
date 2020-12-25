@@ -2,7 +2,7 @@ from config import get_arguments
 from SinGAN.manipulate import *
 from SinGAN.training import *
 import SinGAN.functions as functions
-
+import torch
 
 if __name__ == '__main__':
     parser = get_arguments()
@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_name', help='input image name', required=True)
     parser.add_argument('--mode', help='task to be done', default='train')
     opt = parser.parse_args()
+    torch.autograd.set_detect_anomaly(True)
     opt = functions.post_config(opt)
     Gs = []
     Zs = []

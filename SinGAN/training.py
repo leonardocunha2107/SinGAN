@@ -77,7 +77,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     alpha = opt.alpha
 
     fixed_noise = functions.generate_noise([opt.nc_z,opt.nzx,opt.nzy],device=opt.device)
-    z_opt = torch.full(fixed_noise.shape, 0, device=opt.device)
+    z_opt = torch.zeros(fixed_noise.shape, device=opt.device)
     z_opt = m_noise(z_opt)
 
     # setup optimizer
@@ -118,10 +118,10 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             # train with fake
             if (j==0) & (epoch == 0):
                 if (Gs == []) & (opt.mode != 'SR_train'):
-                    prev = torch.full([1,opt.nc_z,opt.nzx,opt.nzy], 0, device=opt.device)
+                    prev = torch.zeros([1,opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
                     in_s = prev
                     prev = m_image(prev)
-                    z_prev = torch.full([1,opt.nc_z,opt.nzx,opt.nzy], 0, device=opt.device)
+                    z_prev = torch.zeros([1,opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
                     z_prev = m_noise(z_prev)
                     opt.noise_amp = 1
                 elif opt.mode == 'SR_train':
