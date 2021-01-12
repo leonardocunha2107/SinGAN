@@ -118,8 +118,13 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             # train with fake
             if (j==0) & (epoch == 0):
                 if (Gs == []) & (opt.mode != 'SR_train'):
-                    prev = torch.zeros([1,opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
+                    if not opt.paint_name:
+                        prev = torch.zeros([1,opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
+                    else:
+                        prev=functions.read_paint(opt)
+
                     in_s = prev
+                        
                     prev = m_image(prev)
                     z_prev = torch.zeros([1,opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
                     z_prev = m_noise(z_prev)
@@ -144,7 +149,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                 prev = m_image(prev)
 
             if opt.mode == 'paint_train':
-                prev = functions.quant2centers(prev,centers)
+                prev = functions.quant2centers(prev,centers,quantk=opt.quantk)
                 plt.imsave('%s/prev.png' % (opt.outf), functions.convert_image_np(prev), vmin=0, vmax=1)
 
             if (Gs == []) & (opt.mode != 'SR_train'):
