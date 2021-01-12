@@ -184,7 +184,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             if alpha!=0:
                 loss = nn.MSELoss()
                 if opt.mode == 'paint_train':
-                    z_prev = functions.quant2centers(z_prev, centers)
+                    z_prev = functions.quant2centers(z_prev, centers,quantk=opt.quantk)
                     plt.imsave('%s/z_prev.png' % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
                 Z_opt = opt.noise_amp*z_opt+z_prev
                 rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
@@ -263,47 +263,47 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
     in_s = torch.full(reals[0].shape, 0, device=opt.device)
     scale_num = 0
     nfc_prev = 0
-
+    print("Paint train MF")
+    scale_num=paint_inject_scale
+    nfc_prev=opt.nfc
     while scale_num<opt.stop_scale+1:
+
+        opt.nfc = min(opt.nfc_init * pow(2, math.floor(scale_num / 4)), 128)
+        opt.min_nfc = min(opt.min_nfc_init * pow(2, math.floor(scale_num / 4)), 128)
+
+        opt.out_ = functions.generate_dir2save(opt)
+        opt.outf = '%s/%d' % (opt.out_,scale_num)
+        try:
+            os.makedirs(opt.outf)
+        except OSError:
+                pass
+
+        #plt.imsave('%s/in.png' %  (opt.out_), functions.convert_image_np(real), vmin=0, vmax=1)
+        #plt.imsave('%s/original.png' %  (opt.out_), functions.convert_image_np(real_), vmin=0, vmax=1)
+        plt.imsave('%s/in_scale.png' %  (opt.outf), functions.convert_image_np(reals[scale_num]), vmin=0, vmax=1)
         if scale_num!=paint_inject_scale:
-            scale_num += 1
-            nfc_prev = opt.nfc
-            continue
-        else:
-            opt.nfc = min(opt.nfc_init * pow(2, math.floor(scale_num / 4)), 128)
-            opt.min_nfc = min(opt.min_nfc_init * pow(2, math.floor(scale_num / 4)), 128)
+            opt.mode='train'
+        D_curr,G_curr = init_models(opt)
 
-            opt.out_ = functions.generate_dir2save(opt)
-            opt.outf = '%s/%d' % (opt.out_,scale_num)
-            try:
-                os.makedirs(opt.outf)
-            except OSError:
-                    pass
+        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals[:scale_num+1],Gs[:scale_num],Zs[:scale_num],in_s,NoiseAmp[:scale_num],opt,centers=centers)
 
-            #plt.imsave('%s/in.png' %  (opt.out_), functions.convert_image_np(real), vmin=0, vmax=1)
-            #plt.imsave('%s/original.png' %  (opt.out_), functions.convert_image_np(real_), vmin=0, vmax=1)
-            plt.imsave('%s/in_scale.png' %  (opt.outf), functions.convert_image_np(reals[scale_num]), vmin=0, vmax=1)
+        G_curr = functions.reset_grads(G_curr,False)
+        G_curr.eval()
+        D_curr = functions.reset_grads(D_curr,False)
+        D_curr.eval()
 
-            D_curr,G_curr = init_models(opt)
+        Gs[scale_num] = G_curr
+        Zs[scale_num] = z_curr
+        NoiseAmp[scale_num] = opt.noise_amp
 
-            z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals[:scale_num+1],Gs[:scale_num],Zs[:scale_num],in_s,NoiseAmp[:scale_num],opt,centers=centers)
+        torch.save(Zs, '%s/Zs.pth' % (opt.out_))
+        torch.save(Gs, '%s/Gs.pth' % (opt.out_))
+        torch.save(reals, '%s/reals.pth' % (opt.out_))
+        torch.save(NoiseAmp, '%s/NoiseAmp.pth' % (opt.out_))
 
-            G_curr = functions.reset_grads(G_curr,False)
-            G_curr.eval()
-            D_curr = functions.reset_grads(D_curr,False)
-            D_curr.eval()
-
-            Gs[scale_num] = G_curr
-            Zs[scale_num] = z_curr
-            NoiseAmp[scale_num] = opt.noise_amp
-
-            torch.save(Zs, '%s/Zs.pth' % (opt.out_))
-            torch.save(Gs, '%s/Gs.pth' % (opt.out_))
-            torch.save(reals, '%s/reals.pth' % (opt.out_))
-            torch.save(NoiseAmp, '%s/NoiseAmp.pth' % (opt.out_))
-
-            scale_num+=1
-            nfc_prev = opt.nfc
+        scale_num+=1
+        nfc_prev = opt.nfc
+        opt.mode='paint_train'
         del D_curr,G_curr
     return
 

@@ -21,7 +21,7 @@ from sklearn.cluster import KMeans
 def read_paint(opt):
     x=np2torch(img.imread('%s/%s' % (opt.input_dir,opt.paint_name)), opt)
     x = x[:,0:3,:,:]
-    x=imresize_to_shape(x, [1,opt.nc_z,opt.nzx,opt.nzy], opt)
+    x=imresize_to_shape(x, [opt.nzx,opt.nzy], opt)
     return x
 
 def read_image(opt):
@@ -268,8 +268,8 @@ def generate_dir2save(opt):
         dir2save = 'TrainedModels/%s/scale_factor=%f_noise_padding' % (opt.input_name[:-4], opt.scale_factor_init)
     elif (opt.mode == 'paint_train') :
         dir2save = 'TrainedModels/%s/scale_factor=%f_paint/start_scale=%d' % (opt.input_name[:-4], opt.scale_factor_init,opt.paint_start_scale)
-
-            
+        if opt.quantk!=5:
+            dir2save='%s_%d' %(dir2save,opt.quantk)
     elif opt.mode == 'random_samples':
         dir2save = '%s/RandomSamples/%s/gen_start_scale=%d' % (opt.out,opt.input_name[:-4], opt.gen_start_scale)
     elif opt.mode == 'random_samples_arbitrary_sizes':
@@ -317,7 +317,7 @@ def calc_init_scale(opt):
 
 def quant(prev,device,quantk=5):
     arr = prev.reshape((-1, 3)).cpu()
-    kmeans = KMeans(n_clusters=quantk, random_state=0).fit(arr)
+    kmeans = KMeans(n_clusters=quantk, random_state=0,n_init=3).fit(arr)
     labels = kmeans.labels_
     centers = kmeans.cluster_centers_
     x = centers[labels]
@@ -330,7 +330,7 @@ def quant(prev,device,quantk=5):
 
 def quant2centers(paint, centers,quantk=5):
     arr = paint.reshape((-1, 3)).cpu()
-    kmeans = KMeans(n_clusters=quantk, init=centers, n_init=quantk).fit(arr)
+    kmeans = KMeans(n_clusters=quantk, init=centers,n_init=1).fit(arr)
     labels = kmeans.labels_
     #centers = kmeans.cluster_centers_
     x = centers[labels]
