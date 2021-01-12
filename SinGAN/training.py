@@ -305,6 +305,7 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
         nfc_prev = opt.nfc
         opt.mode='paint_train'
         del D_curr,G_curr
+        if not opt.paint_all: return
     return
 
 

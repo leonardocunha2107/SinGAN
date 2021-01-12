@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('--quantization_flag', help='specify if to perform color quantization training', type=bool, default=False)
     parser.add_argument('--quantk',default=5,type=int)
     parser.add_argument('--mode', help='task to be done', default='paint2image')
+    parser.add_argument('--train_all',action='store_true')
     opt = parser.parse_args()
     opt = functions.post_config(opt)
     Gs = []
