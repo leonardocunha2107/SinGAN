@@ -270,6 +270,8 @@ def generate_dir2save(opt):
         dir2save = 'TrainedModels/%s/scale_factor=%f_paint/start_scale=%d' % (opt.input_name[:-4], opt.scale_factor_init,opt.paint_start_scale)
         if opt.quantk!=5:
             dir2save='%s_%d' %(dir2save,opt.quantk)
+        if not opt.train_all:
+            dir2save= '%s_%s' %(dir2save,'s')
     elif opt.mode == 'random_samples':
         dir2save = '%s/RandomSamples/%s/gen_start_scale=%d' % (opt.out,opt.input_name[:-4], opt.gen_start_scale)
     elif opt.mode == 'random_samples_arbitrary_sizes':
