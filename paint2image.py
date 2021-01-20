@@ -36,45 +36,42 @@ if __name__ == '__main__':
         real = functions.read_image(opt)
         real = functions.adjust_scales2image(real, opt)
         Gs, Zs, reals, NoiseAmp = functions.load_trained_pyramid(opt)
-        if (opt.paint_start_scale < 1) | (opt.paint_start_scale > (len(Gs)-1)):
-            print("injection scale should be between 1 and %d" % (len(Gs)-1))
-        else:
-            ref = functions.read_image_dir('%s/%s' % (opt.ref_dir, opt.ref_name), opt)
-            if ref.shape[3] != real.shape[3]:
-                ref = imresize_to_shape(ref, [real.shape[2], real.shape[3]], opt)
-                ref = ref[:, :, :real.shape[2], :real.shape[3]]
+        ref = functions.read_image_dir('%s/%s' % (opt.ref_dir, opt.ref_name), opt)
+        if ref.shape[3] != real.shape[3]:
+            ref = imresize_to_shape(ref, [real.shape[2], real.shape[3]], opt)
+            ref = ref[:, :, :real.shape[2], :real.shape[3]]
 
-            N = len(reals) - 1
-            n = opt.paint_start_scale
-            in_s = imresize(ref, pow(opt.scale_factor, (N - n + 1)), opt)
-            in_s = in_s[:, :, :reals[n - 1].shape[2], :reals[n - 1].shape[3]]
-            in_s = imresize(in_s, 1 / opt.scale_factor, opt)
+        N = len(reals) - 1
+        n = opt.paint_start_scale
+        in_s = imresize(ref, pow(opt.scale_factor, (N - n + 1)), opt)
+        in_s = in_s[:, :, :reals[n - 1].shape[2], :reals[n - 1].shape[3]]
+        in_s = imresize(in_s, 1 / opt.scale_factor, opt)
+        in_s = in_s[:, :, :reals[n].shape[2], :reals[n].shape[3]]
+        if opt.quantization_flag:
+            opt.mode = 'paint_train'
+            dir2trained_model = functions.generate_dir2save(opt)
+            # N = len(reals) - 1
+            # n = opt.paint_start_scale
+            real_s = imresize(real, pow(opt.scale_factor, (N - n)), opt)
+            real_s = real_s[:, :, :reals[n].shape[2], :reals[n].shape[3]]
+            real_quant, centers = functions.quant(real_s, opt.device,quantk=opt.quantk)
+            plt.imsave('%s/real_quant.png' % dir2save, functions.convert_image_np(real_quant), vmin=0, vmax=1)
+            plt.imsave('%s/in_paint.png' % dir2save, functions.convert_image_np(in_s), vmin=0, vmax=1)
+            in_s = functions.quant2centers(ref, centers,quantk=opt.quantk)
+            in_s = imresize(in_s, pow(opt.scale_factor, (N - n)), opt)
+            # in_s = in_s[:, :, :reals[n - 1].shape[2], :reals[n - 1].shape[3]]
+            # in_s = imresize(in_s, 1 / opt.scale_factor, opt)
             in_s = in_s[:, :, :reals[n].shape[2], :reals[n].shape[3]]
-            if opt.quantization_flag:
-                opt.mode = 'paint_train'
-                dir2trained_model = functions.generate_dir2save(opt)
-                # N = len(reals) - 1
-                # n = opt.paint_start_scale
-                real_s = imresize(real, pow(opt.scale_factor, (N - n)), opt)
-                real_s = real_s[:, :, :reals[n].shape[2], :reals[n].shape[3]]
-                real_quant, centers = functions.quant(real_s, opt.device,quantk=opt.quantk)
-                plt.imsave('%s/real_quant.png' % dir2save, functions.convert_image_np(real_quant), vmin=0, vmax=1)
-                plt.imsave('%s/in_paint.png' % dir2save, functions.convert_image_np(in_s), vmin=0, vmax=1)
-                in_s = functions.quant2centers(ref, centers,quantk=opt.quantk)
-                in_s = imresize(in_s, pow(opt.scale_factor, (N - n)), opt)
-                # in_s = in_s[:, :, :reals[n - 1].shape[2], :reals[n - 1].shape[3]]
-                # in_s = imresize(in_s, 1 / opt.scale_factor, opt)
-                in_s = in_s[:, :, :reals[n].shape[2], :reals[n].shape[3]]
-                plt.imsave('%s/in_paint_quant.png' % dir2save, functions.convert_image_np(in_s), vmin=0, vmax=1)
-                if (os.path.exists(dir2trained_model)):
-                    # print('Trained model does not exist, training SinGAN for SR')
-                    Gs, Zs, reals, NoiseAmp = functions.load_trained_pyramid(opt)
-                    opt.mode = 'paint2image'
-                else:
-                    train_paint(opt, Gs, Zs, reals, NoiseAmp, centers, opt.paint_start_scale)
-                    opt.mode = 'paint2image'
-            out = SinGAN_generate(Gs[n:], Zs[n:], reals, NoiseAmp[n:], opt, in_s, n=n, num_samples=1)
-            plt.imsave('%s/start_scale=%d.png' % (dir2save, opt.paint_start_scale), functions.convert_image_np(out.detach()), vmin=0, vmax=1)
+            plt.imsave('%s/in_paint_quant.png' % dir2save, functions.convert_image_np(in_s), vmin=0, vmax=1)
+            if (os.path.exists(dir2trained_model)):
+                # print('Trained model does not exist, training SinGAN for SR')
+                Gs, Zs, reals, NoiseAmp = functions.load_trained_pyramid(opt)
+                opt.mode = 'paint2image'
+            else:
+                train_paint(opt, Gs, Zs, reals, NoiseAmp, centers, opt.paint_start_scale)
+                opt.mode = 'paint2image'
+        out = SinGAN_generate(Gs[n:], Zs[n:], reals, NoiseAmp[n:], opt, in_s, n=n, num_samples=1)
+        plt.imsave('%s/start_scale=%d.png' % (dir2save, opt.paint_start_scale), functions.convert_image_np(out.detach()), vmin=0, vmax=1)
 
 
 
